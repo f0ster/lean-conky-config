@@ -26,10 +26,10 @@ ${voffset $sr{-13}}${alignr}${lua format %.1f {%= g.power_usage %}}W
 ${color3}${lua_bar {%= lcc.half_bar_size %} echo {%= g.fan_speed %}} ${color}${alignr}${lua_bar {%= lcc.half_bar_size %} ratio_perc {%= g.power_usage %} {%= g.power_limit %}}
 ${color2}${lua font h2 MEM}${font}${color} ${alignc $sr{-16}}{%= g.mem_used_h %} / {%= g.mem_total_h %} ${alignr}{%= g.mem_util %}% ${color2}${lua font h2 UT}
 ${color3}${lua_bar ratio_perc {%= g.mem_used %} {%= g.mem_total %}}${color}
-{% if g.processes then %}
-${color2}${lua font h2 {PROCESS ${goto $sr{156}}PID ${goto $sr{194}}MEM%${alignr}GPU%}}${font}${color}#
+{% if g.processes and #g.processes > 0 then %}
+${color2}${lua font h2 {PROCESS ${goto $sr{156}}PID ${goto $sr{194}}MEM${alignr}GPU%}}${font}${color}#
 {% for _, p in ipairs(g.processes) do +%}
-{%= p.name %} ${goto $sr{156}}{%= p.pid %}${alignr}${offset $sr{-44}}${lua ratio_perc {%= p.gpu_mem %} {%= g.mem_total %} 2}
+{%= p.name %} ${goto $sr{156}}{%= p.pid %}${alignr}${offset $sr{-44}}{%= p.gpu_mem_h %}
 ${voffset $sr{-13}}${alignr}${lua format %.1f {%= p.gpu_util %}}{% end %}{% end %}
 {% end %}]]
 local function _nvidia_nvml(top_n)
@@ -42,7 +42,13 @@ local function _nvidia_nvml(top_n)
         g.mem_used_h = utils.filesize(g.mem_used)
         g.mem_total_h = utils.filesize(g.mem_total)
 
-        if top_n > 0 then
+        if g.processes then
+            for _, p in ipairs(g.processes) do
+                p.gpu_mem_h = utils.filesize(p.gpu_mem)
+            end
+        end
+
+        if top_n > 0 and g.processes then
             local p = g.processes
             while #p > top_n do
                 table.remove(p)
