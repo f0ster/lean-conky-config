@@ -55,6 +55,9 @@ utils.table.update(components, core)
 -- GPU support for different vendors, as of now only Nvidia's is supported
 components.gpu = require("components.gpu")
 
+-- Weather support
+components.weather = require("components.weather")
+
 
 ------------------------
 -- external interface --
