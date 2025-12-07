@@ -33,10 +33,11 @@ ${color2}${lua font h2 {PROCESS ${goto $sr{156}}PID ${goto $sr{194}}MEM${alignr}
 ${voffset $sr{-13}}${alignr}${lua format %.1f {%= p.gpu_util %}}{% end %}{% end %}
 {% end %}]]
 local function _nvidia_nvml(top_n)
-    local out, rc = utils.sys_call(lcc.root_dir .. "/lib/components/gpu_nvml 2>/dev/null", true)
-    if rc > 0 or not out then return end
+    local out = utils.sys_call(lcc.root_dir .. "lib/components/gpu_nvml 2>&1", true)
+    if not out or out == "" then return nil end
+    
     local ok, gpu_info = pcall(utils.loadstring("return " .. out))
-    if not ok then return end
+    if not ok or not gpu_info then return nil end
 
     for _, g in ipairs(gpu_info) do
         g.mem_used_h = utils.filesize(g.mem_used)
@@ -58,27 +59,17 @@ local function _nvidia_nvml(top_n)
     return utils.trim(lcc.tpl.nvidia_nvml { gpu_info = gpu_info })
 end
 
-local _lz = utils.table.lazy {
-    -- check if conky was built with nvidia support
-    built_with_nvidia = function()
-        return (conky_parse("${nvidia modelname}") ~= "${nvidia}")
-    end
-}
-
 function conky_nvidia(interv, top_n)
+    -- Use pynvml for GPU monitoring
     local rendered = core._interval_call(
         interv, _nvidia_nvml, tonumber(top_n or 0)
     )
     if rendered then return rendered end
 
-    if _lz.built_with_nvidia then
-        return core._interval_call(interv, _nvidia_conky)
-    end
-
+    -- If pynvml fails, show error message
     return conky_parse(core.message("error+",
-        "\nFailed to load Nvidia, two options to enable:\n" ..
-        "1. Python + pynvml (recommended)\n" ..
-        "2. Conky built with nvidia support"
+        "\nFailed to load Nvidia GPU info.\n" ..
+        "Install pynvml: pip install pynvml"
     ))
 end
 
